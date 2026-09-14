@@ -28,8 +28,8 @@ interface Props {
 
 const ACTIONS: [Action, string, string, string][] = [
   ["thumb", "01", "Thumbnail prompt", "Slide 1. Brand block, format layout, this row’s copy."],
-  ["copy", "02", "Slide copy prompt", "Text step. Turns the gist into slide headers and bodies."],
-  ["slide", "03", "Content slide prompt", "One per slide. Paste a header and body from step 02."],
+  ["copy", "02", "Copy prompt", "Text step. Turns the gist into slide headers, bodies and the post caption."],
+  ["slide", "03", "Content slide(s) prompt", "One per slide. Paste a header and body from step 02."],
 ];
 
 export function IdeaDetail({ idea, format, prompts, onStatus, onToggleMaster, onEdit, onDelete, onBack }: Props) {
@@ -104,8 +104,8 @@ function PanelThumb({ idea, format, prompts, onToggleMaster }: { idea: Idea; for
 function PanelCopy({ idea, prompts }: { idea: Idea; prompts: PromptMap }) {
   return (
     <div className="panel">
-      <h3>Slide copy (text step)</h3>
-      <p>Run in a separate text conversation with no images. Check every header against the rules before rendering; the checker in step 03 will flag anything over the limit.</p>
+      <h3>Copy (text step)</h3>
+      <p>Run in a separate text conversation with no images. It gives you the slide headers and bodies plus the post caption. Check every header against the rules before rendering; the checker in step 03 will flag anything over the limit.</p>
       <OutBlock text={slideCopyPrompt(idea, prompts)} label="Paste into a text-only conversation." />
     </div>
   );
@@ -126,7 +126,7 @@ function PanelSlide({ format, prompts, onToggleMaster }: { format: Format; promp
 
   return (
     <div className="panel">
-      <h3>Content slide</h3>
+      <h3>Content slide(s)</h3>
       <p>One prompt per slide. Paste the header and body the slide copy step gave you. Counters and logo are added afterwards in Stamp, never here.</p>
       <Field label="Header" htmlFor="sh" hint={<div className={"hint" + (hi.length ? " bad" : "")}>{hHint}</div>}>
         <input id="sh" placeholder="Your search result sells first." value={header} onChange={(e) => setHeader(e.target.value)} />
