@@ -24,6 +24,16 @@ npm start           # one Node process serves the API and the built UI on port 3
 
 Set `PORT` to change the API port. The Vite dev proxy follows it.
 
+## Deploying to Vercel
+
+The repo is Vercel-ready: `vercel.json` builds the UI into `dist/` and routes every `/api/*` request to
+`api/index.ts`, which runs the same Express app as a serverless function.
+
+1. Import the repository in Vercel (root directory = this folder).
+2. In the project settings, add the environment variable `DATABASE_URL` with the Neon connection string.
+   Without it the API returns an error and the UI shows "Could not load the idea bank".
+3. Deploy. Tables must already exist: run `npm run db:seed` once from your machine against the same database.
+
 ## What lives where
 
 | Thing | Where | Why |

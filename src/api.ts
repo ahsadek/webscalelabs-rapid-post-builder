@@ -7,6 +7,11 @@ async function req<T>(url: string, method: string, body?: unknown): Promise<T> {
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (res.status === 204) return undefined as T;
+  const isJson = (res.headers.get("content-type") || "").includes("application/json");
+  if (!isJson) {
+    // The static site answered instead of the API: the serverless function is missing or misrouted.
+    throw new Error(`The API at ${url} did not answer (HTTP ${res.status}). Check the deployment: the /api function and the DATABASE_URL environment variable.`);
+  }
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((json as { error?: string }).error || res.statusText);
   return json as T;

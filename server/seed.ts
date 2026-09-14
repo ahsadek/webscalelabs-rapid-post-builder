@@ -1,8 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { pool } from "./db.ts";
-import { migrate } from "./migrate.ts";
-import { DEFAULT_FORMATS, DEFAULT_IDEAS, DEFAULT_PROMPTS } from "../shared/defaults.ts";
+import { pool } from "./db";
+import { migrate } from "./migrate";
+import { DEFAULT_FORMATS, DEFAULT_IDEAS, DEFAULT_PROMPTS } from "../shared/defaults";
 
 /**
  * Idempotent seed. Inserts the five formats, the four shared prompts and the 28 ideas
