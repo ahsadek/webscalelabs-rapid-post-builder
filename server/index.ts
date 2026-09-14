@@ -6,8 +6,8 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { app } from "./app";
-import { pool } from "./db";
+import { app } from "./app.js";
+import { pool } from "./db.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(here, "..", "dist");

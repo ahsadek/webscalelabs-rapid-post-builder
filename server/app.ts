@@ -1,6 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from "express";
-import { query } from "./db";
-import { DEFAULT_FORMATS, DEFAULT_PROMPTS } from "../shared/defaults";
+import { query } from "./db.js";
+import { DEFAULT_FORMATS, DEFAULT_PROMPTS } from "../shared/defaults.js";
 
 const PROMPT_ORDER = new Map(DEFAULT_PROMPTS.map((p, i) => [p.key, i]));
 

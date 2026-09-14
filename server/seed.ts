@@ -1,8 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { pool } from "./db";
-import { migrate } from "./migrate";
-import { DEFAULT_FORMATS, DEFAULT_IDEAS, DEFAULT_PROMPTS } from "../shared/defaults";
+import { pool } from "./db.js";
+import { migrate } from "./migrate.js";
+import { DEFAULT_FORMATS, DEFAULT_IDEAS, DEFAULT_PROMPTS } from "../shared/defaults.js";
 
 /**
  * Idempotent seed. Inserts the five formats, the four shared prompts and the 28 ideas

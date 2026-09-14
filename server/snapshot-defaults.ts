@@ -8,8 +8,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { pool } from "./db";
-import { DEFAULT_IDEAS } from "../shared/defaults";
+import { pool } from "./db.js";
+import { DEFAULT_IDEAS } from "../shared/defaults.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const target = path.join(here, "..", "shared", "defaults.ts");
