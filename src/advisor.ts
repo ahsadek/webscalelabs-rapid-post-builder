@@ -23,7 +23,7 @@ export function buildAdvisorPrompt(request: string, prompts: Prompt[], formats: 
   const byKey = Object.fromEntries(prompts.map((p) => [p.key, p]));
   const formatNames = formats.map((f) => `"${f.name}"`).join(", ");
 
-  const map = `You are helping a small team maintain the prompt system behind "Rapid Post Builder", an internal web app made by WebScale Labs. The app turns a bank of post ideas into social media carousels: it assembles prompts that the team pastes into ChatGPT (with image generation) to render each slide. Nothing is generated inside the app itself; the app only stores text and assembles prompts.
+  const map = `You are helping a small team maintain the prompt system behind "Rapid Post Builder", an internal web app made by WebScaleLabs. The app turns a bank of post ideas into social media carousels: it assembles prompts that the team pastes into ChatGPT (with image generation) to render each slide. Nothing is generated inside the app itself; the app only stores text and assembles prompts.
 
 The team wants to change something (or has a question) and needs to know EXACTLY which stored text to edit, where to find it in the app, and what to type. Their request is at the very end of this message. All the current prompt texts are included below, verbatim, so you can quote them.
 

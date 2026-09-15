@@ -1,4 +1,4 @@
-# WebScale Labs · Rapid Post Builder
+# WebScaleLabs · Rapid Post Builder
 
 A small React + Express app that replaces the static `index.html` post builder. Same workflow, same prompts,
 same stamping step. The difference is that the idea bank, the statuses, the format prompts and the shared

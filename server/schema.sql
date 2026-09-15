@@ -1,9 +1,9 @@
--- WebScale Labs Post Builder schema.
+-- WebScaleLabs Post Builder schema.
 -- Three small tables:
 --   formats  : the five locked thumbnail formats (name, eyebrow, colour, layout prompt). Add a row to add a format.
 --   ideas    : the idea bank. One row per post, points at a format, carries the team-wide status.
---   prompts  : the shared, editable prompt texts (caption rules, slide copy, content slide, platform caption).
--- The brand block is NOT in the database on purpose: it is frozen and hard-coded in shared/defaults.ts.
+--   prompts  : the shared, editable prompt texts (brand block, caption rules, slide copy, content slide, platform caption).
+-- The brand block is also a row in prompts (key "brand"), editable from Settings like the others.
 
 CREATE TABLE IF NOT EXISTS formats (
   id          serial PRIMARY KEY,
