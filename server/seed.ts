@@ -1,68 +1,66 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pool } from "./db.js";
 import { migrate } from "./migrate.js";
-import { DEFAULT_FORMATS, DEFAULT_IDEAS, DEFAULT_PROMPTS } from "../shared/defaults.js";
+import { DEFAULT_PROMPTS } from "../shared/defaults.js";
+import type { IdeaInput } from "../shared/types.js";
+import { normalizeIdea, validateIdea } from "../shared/validate.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+export const IDEAS_DIR = path.join(here, "..", "content", "ideas");
+
+/** Reads every content/ideas/*.json file (one idea per file), validated. Throws on the first invalid file. */
+export function loadIdeaFiles(): { file: string; idea: IdeaInput }[] {
+  if (!fs.existsSync(IDEAS_DIR)) return [];
+  const out: { file: string; idea: IdeaInput }[] = [];
+  for (const file of fs.readdirSync(IDEAS_DIR).filter((f) => f.endsWith(".json")).sort()) {
+    const raw = JSON.parse(fs.readFileSync(path.join(IDEAS_DIR, file), "utf8"));
+    const report = validateIdea(raw);
+    if (report.errors.length) throw new Error(`${file}:\n  ${report.errors.join("\n  ")}`);
+    out.push({ file, idea: normalizeIdea(raw as IdeaInput) });
+  }
+  return out;
+}
+
+/** Inserts ideas that are not in the table yet (matched by title). Returns how many went in. */
+export async function importIdeas(ideas: IdeaInput[]): Promise<{ inserted: string[]; skipped: string[] }> {
+  const inserted: string[] = [];
+  const skipped: string[] = [];
+  for (const idea of ideas) {
+    const { rowCount } = await pool.query(
+      `INSERT INTO post_ideas (title, pillar, service, single, carousel)
+       VALUES ($1, $2, $3, $4, $5) ON CONFLICT (title) DO NOTHING`,
+      [idea.title, idea.pillar, idea.service, idea.single, JSON.stringify(idea.carousel)],
+    );
+    (rowCount ? inserted : skipped).push(idea.title);
+  }
+  return { inserted, skipped };
+}
 
 /**
- * Idempotent seed. Inserts the five formats, the four shared prompts and the 28 ideas
- * only when they are missing, so it is safe to run again after the team has added rows.
+ * Idempotent seed: creates the tables, inserts the shared prompts that are missing (never overwrites an
+ * edited one) and imports every idea file under content/ideas that is not in the bank yet.
  */
 export async function seed() {
   await migrate();
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    for (const [i, f] of DEFAULT_FORMATS.entries()) {
-      await client.query(
-        `INSERT INTO formats (name, eyebrow, color, prompt, sort_order)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (name) DO NOTHING`,
-        [f.name, f.eyebrow, f.color, f.prompt, i + 1],
-      );
-    }
-
-    for (const p of DEFAULT_PROMPTS) {
-      await client.query(
-        `INSERT INTO prompts (key, label, body) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING`,
-        [p.key, p.label, p.body],
-      );
-    }
-
-    const { rows: formats } = await client.query<{ id: number; name: string }>("SELECT id, name FROM formats");
-    const idByName = new Map(formats.map((f) => [f.name, f.id]));
-
-    const { rows: existing } = await client.query<{ n: string }>("SELECT count(*)::text AS n FROM ideas");
-    if (existing[0].n === "0") {
-      for (const idea of DEFAULT_IDEAS) {
-        const formatId = idByName.get(idea.format);
-        if (!formatId) throw new Error(`Unknown format in defaults: ${idea.format}`);
-        await client.query(
-          `INSERT INTO ideas (format_id, title, gist, copy) VALUES ($1, $2, $3, $4)`,
-          [formatId, idea.title, idea.gist, idea.copy],
-        );
-      }
-    }
-
-    await client.query("COMMIT");
-  } catch (e) {
-    await client.query("ROLLBACK");
-    throw e;
-  } finally {
-    client.release();
+  for (const p of DEFAULT_PROMPTS) {
+    await pool.query(`INSERT INTO post_prompts (key, label, body) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING`, [
+      p.key,
+      p.label,
+      p.body,
+    ]);
   }
+  return importIdeas(loadIdeaFiles().map((f) => f.idea));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   seed()
-    .then(async () => {
+    .then(async (r) => {
       const { rows } = await pool.query(
-        `SELECT (SELECT count(*) FROM formats) AS formats,
-                (SELECT count(*) FROM ideas) AS ideas,
-                (SELECT count(*) FROM prompts) AS prompts`,
+        `SELECT (SELECT count(*) FROM post_ideas) AS ideas, (SELECT count(*) FROM post_prompts) AS prompts`,
       );
-      console.log("Seeded.", rows[0]);
+      console.log(`Seeded. ${r.inserted.length} idea(s) imported, ${r.skipped.length} already present.`, rows[0]);
       await pool.end();
     })
     .catch((e) => {

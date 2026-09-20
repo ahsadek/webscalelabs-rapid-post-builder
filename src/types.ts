@@ -1,44 +1,20 @@
-export type Status = "Unused" | "Drafted" | "Posted";
-export const STATUSES: Status[] = ["Unused", "Drafted", "Posted"];
+export * from "../shared/types";
 
-export type PromptKey = "brand" | "captionRules" | "slideCopy" | "contentSlide" | "platformCaption";
+import type { Pillar } from "../shared/types";
 
-export interface Format {
-  id: number;
-  name: string;
-  eyebrow: string;
-  color: string;
-  prompt: string;
-  hasMaster: boolean;
-  sortOrder: number;
-}
+/** Sidebar colour per pillar. Presentation only. */
+export const PILLAR_COLORS: Record<Pillar, string> = {
+  "Social proof and client results": "#00CAEA",
+  "Educational content about digital marketing": "#009AB8",
+  "Pain points of business owners": "#E07A5F",
+  "What makes WebScaleLabs different": "#8D6CD9",
+  "Services and what they actually do for a business": "#3E9A6A",
+};
 
-export interface Idea {
-  id: number;
-  formatId: number;
-  title: string;
-  gist: string;
-  copy: string;
-  status: Status;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Prompt {
-  key: PromptKey;
-  label: string;
-  body: string;
-}
-
-export interface Bootstrap {
-  formats: Format[];
-  ideas: Idea[];
-  prompts: Prompt[];
-  defaults: {
-    prompts: Record<string, string>;
-    formats: Record<string, string>;
-  };
-}
-
-export type IdeaInput = { formatId: number; title: string; gist: string; copy: string };
-export type FormatInput = { name: string; eyebrow: string; color: string; prompt: string };
+export const PILLAR_SHORT: Record<Pillar, string> = {
+  "Social proof and client results": "Social proof",
+  "Educational content about digital marketing": "Educational",
+  "Pain points of business owners": "Pain points",
+  "What makes WebScaleLabs different": "Why us",
+  "Services and what they actually do for a business": "Services",
+};

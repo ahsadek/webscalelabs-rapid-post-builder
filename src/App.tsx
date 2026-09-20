@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import type { Bootstrap, Format, FormatInput, Idea, IdeaInput, PromptKey, Status } from "./types";
+import type { Bootstrap, Idea, IdeaInput, PromptKey, PromptMap, Status } from "./types";
 import { ToastProvider, useToast } from "./ui";
-import { Sidebar } from "./views/Sidebar";
+import { Sidebar, type Filters } from "./views/Sidebar";
 import { IdeaDetail } from "./views/IdeaDetail";
 import { IdeaForm } from "./views/IdeaForm";
 import { StampView } from "./views/StampView";
 import { SettingsView } from "./views/SettingsView";
-import type { PromptMap } from "./prompts";
+import { slug } from "../shared/render";
 
 type View = "prompts" | "stamp" | "settings";
 type Route = { view: View; ideaId: number | null; newIdea: boolean };
@@ -37,7 +37,7 @@ function Shell() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
   const [route, setRoute] = useState<Route>(parseHash);
-  const [filter, setFilter] = useState<string>("All");
+  const [filters, setFilters] = useState<Filters>({ q: "", status: "All", pillar: "All", service: "All" });
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -68,23 +68,18 @@ function Shell() {
     [toast],
   );
 
-  const formats = data?.formats ?? [];
   const ideas = data?.ideas ?? [];
   const prompts = useMemo(
     () => Object.fromEntries((data?.prompts ?? []).map((p) => [p.key, p.body])) as PromptMap,
     [data],
   );
-  const formatById = useMemo(() => new Map(formats.map((f) => [f.id, f])), [formats]);
   const current = route.ideaId != null ? ideas.find((i) => i.id === route.ideaId) ?? null : null;
 
   /* ---------- mutations ---------- */
   const patch = (fn: (d: Bootstrap) => Bootstrap) => setData((d) => (d ? fn(d) : d));
+  const replaceIdea = (updated: Idea) => patch((d) => ({ ...d, ideas: d.ideas.map((i) => (i.id === updated.id ? updated : i)) }));
 
-  const setStatus = (idea: Idea, status: Status) =>
-    run(async () => {
-      const updated = await api.updateIdea(idea.id, { status });
-      patch((d) => ({ ...d, ideas: d.ideas.map((i) => (i.id === updated.id ? updated : i)) }));
-    });
+  const setStatus = (idea: Idea, status: Status) => run(async () => replaceIdea(await api.updateIdea(idea.id, { status })));
 
   const createIdea = (input: IdeaInput) =>
     run(async () => {
@@ -95,8 +90,7 @@ function Shell() {
 
   const updateIdea = (id: number, input: IdeaInput) =>
     run(async () => {
-      const updated = await api.updateIdea(id, input);
-      patch((d) => ({ ...d, ideas: d.ideas.map((i) => (i.id === updated.id ? updated : i)) }));
+      replaceIdea(await api.updateIdea(id, input));
       setEditing(false);
     }, "Idea saved");
 
@@ -109,39 +103,11 @@ function Shell() {
     }, "Idea deleted");
   };
 
-  const toggleMaster = (format: Format, hasMaster: boolean) =>
-    run(async () => {
-      const updated = await api.updateFormat(format.id, { hasMaster });
-      patch((d) => ({ ...d, formats: d.formats.map((f) => (f.id === updated.id ? updated : f)) }));
-    });
-
   const savePrompt = (key: PromptKey, body: string) =>
     run(async () => {
       const saved = await api.savePrompt(key, body);
       patch((d) => ({ ...d, prompts: d.prompts.map((p) => (p.key === saved.key ? saved : p)) }));
     }, "Saved");
-
-  const saveFormat = (id: number, input: Partial<FormatInput>) =>
-    run(async () => {
-      const saved = await api.updateFormat(id, input);
-      patch((d) => ({ ...d, formats: d.formats.map((f) => (f.id === saved.id ? saved : f)) }));
-    }, "Saved");
-
-  const createFormat = (input: FormatInput) =>
-    run(async () => {
-      const created = await api.createFormat(input);
-      patch((d) => ({ ...d, formats: [...d.formats, created] }));
-      return created;
-    }, "Format added");
-
-  const deleteFormat = (format: Format) => {
-    if (!window.confirm(`Delete the format "${format.name}"?`)) return;
-    run(async () => {
-      await api.deleteFormat(format.id);
-      patch((d) => ({ ...d, formats: d.formats.filter((f) => f.id !== format.id) }));
-      if (filter === format.name) setFilter("All");
-    }, "Format deleted");
-  };
 
   /* ---------- render ---------- */
   const view = route.view;
@@ -160,7 +126,7 @@ function Shell() {
         <nav className="nav" aria-label="Sections">
           {(["prompts", "stamp", "settings"] as View[]).map((v) => (
             <button key={v} aria-current={view === v ? "page" : undefined} onClick={() => go(v)}>
-              {v[0].toUpperCase() + v.slice(1)}
+              {v === "prompts" ? "Ideas" : v[0].toUpperCase() + v.slice(1)}
             </button>
           ))}
         </nav>
@@ -178,9 +144,8 @@ function Shell() {
           {showSide && (
             <Sidebar
               ideas={ideas}
-              formats={formats}
-              filter={filter}
-              onFilter={setFilter}
+              filters={filters}
+              onFilters={setFilters}
               currentId={current?.id ?? null}
               onSelect={(i) => go(`prompts/${i.id}`)}
               onNew={() => go("prompts/new")}
@@ -193,15 +158,14 @@ function Shell() {
                 <div className="detail">
                   <button className="btn ghost sm back" onClick={() => go("prompts")}>← All ideas</button>
                   <h2 className="page-title">New post idea.</h2>
-                  <p className="lead">Pick one of the formats, write the in-image copy in the same pattern as the other rows, and give it a gist. It is saved for the whole team.</p>
-                  <IdeaForm formats={formats} onSubmit={createIdea} onCancel={() => go("prompts")} submitLabel="Add idea" />
+                  <p className="lead">One idea carries both the single-slide post and the 4-slide carousel. Fill the fields, or paste a JSON file from the idea pipeline. It is saved for the whole team.</p>
+                  <IdeaForm onSubmit={createIdea} onCancel={() => go("prompts")} submitLabel="Add idea" />
                 </div>
               ) : current && editing ? (
                 <div className="detail">
                   <button className="btn ghost sm back" onClick={() => setEditing(false)}>← Back</button>
                   <h2 className="page-title">Edit idea.</h2>
                   <IdeaForm
-                    formats={formats}
                     initial={current}
                     onSubmit={(input) => updateIdea(current.id, input)}
                     onCancel={() => setEditing(false)}
@@ -212,10 +176,8 @@ function Shell() {
                 <IdeaDetail
                   key={current.id}
                   idea={current}
-                  format={formatById.get(current.formatId)}
                   prompts={prompts}
                   onStatus={(s) => setStatus(current, s)}
-                  onToggleMaster={(f, v) => toggleMaster(f, v)}
                   onEdit={() => setEditing(true)}
                   onDelete={() => deleteIdea(current)}
                   onBack={() => go("prompts")}
@@ -228,20 +190,9 @@ function Shell() {
             </section>
           )}
 
-          {view === "stamp" && <StampView baseName={current ? current.copy : null} />}
+          {view === "stamp" && <StampView baseName={current ? slug(current) : null} />}
 
-          {view === "settings" && (
-            <SettingsView
-              prompts={data.prompts}
-              formats={formats}
-              ideas={ideas}
-              defaults={data.defaults}
-              onSavePrompt={savePrompt}
-              onSaveFormat={saveFormat}
-              onCreateFormat={createFormat}
-              onDeleteFormat={deleteFormat}
-            />
-          )}
+          {view === "settings" && <SettingsView prompts={data.prompts} defaults={data.defaults} onSavePrompt={savePrompt} />}
         </main>
       )}
     </>

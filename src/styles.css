@@ -55,8 +55,7 @@ main.single { grid-template-columns: minmax(0, 1fr); }
 .idea .t { font-weight: 700; color: var(--ink); font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
 .idea .m { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
 .idea .st { font-family: var(--mono); font-size: 10.5px; color: var(--muted); letter-spacing: 0.06em; padding-top: 3px; white-space: nowrap; }
-.idea .st.posted { color: var(--cyan-deep); }
-.idea .st.drafted { color: var(--navy); }
+.idea .st.used { color: var(--cyan-deep); }
 .empty { padding: 32px 20px; color: var(--muted); text-align: center; }
 
 /* ---- detail ---- */
@@ -71,6 +70,8 @@ main.single { grid-template-columns: minmax(0, 1fr); }
 .gist { color: var(--body); margin: 0 0 16px; max-width: 64ch; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 18px; }
 .row.between { justify-content: space-between; }
+/* A button row that sits directly under a text area, input, output block or report never touches it. */
+textarea + .row, input + .row, select + .row, .out + .row, .report + .row, .field + .row, .grid2 + .row { margin-top: 14px; }
 .status-sel { border: 1px solid var(--border); border-radius: 4px; padding: 7px 38px 7px 12px; font-weight: 600; font-size: 13px; }
 .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 22px; }
 @media (max-width: 640px) { .actions { grid-template-columns: 1fr; } }
@@ -154,7 +155,7 @@ textarea.mono { display: block; width: 100%; min-height: 220px; font-family: var
 .settings summary .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--fmt, var(--cyan-mid)); flex: none; }
 .settings summary .meta { font-weight: 500; font-size: 12.5px; color: var(--muted); }
 .settings .in { padding: 0 16px 16px; }
-.settings .in .row { margin: 10px 0 0; }
+.settings .in .row { margin: 14px 0 0; }
 
 /* ---- stamp: advanced panel ---- */
 details.adv { border: 1px solid var(--alt); border-radius: 4px; background: var(--soft); margin: 0 0 18px; }
@@ -186,3 +187,47 @@ details.adv .in { padding: 4px 16px 16px; }
 @media (max-width: 640px) { .top { row-gap: 16px; } }
 .settings details.advisor { margin: 0 0 6px; }
 .settings details.advisor summary::before { content: "✦"; color: var(--cyan-mid); margin-right: 2px; }
+
+/* ---------- v2: ideas with single + carousel ---------- */
+.filters { gap: 8px; }
+.search { position: relative; }
+.search::before { content: ""; position: absolute; left: 12px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Ccircle cx='6' cy='6' r='4.5' fill='none' stroke='%236B8FA3' stroke-width='1.6'/%3E%3Cpath d='M9.5 9.5L13 13' stroke='%236B8FA3' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 14px; }
+.filter-q { appearance: none; -webkit-appearance: none; width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 9px 34px 9px 34px; font-size: 13.5px; font-weight: 500; color: var(--ink); background: var(--white); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+.filter-q::placeholder { color: var(--muted); font-weight: 400; }
+.filter-q::-webkit-search-decoration, .filter-q::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.filter-q:focus, .filter-sel:focus { border-color: var(--cyan-mid); box-shadow: 0 0 0 3px rgba(0, 154, 184, 0.15); outline: none; }
+.search .clear { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 24px; font-weight: 300; line-height: 1; display: grid; place-items: center; padding: 0 0 2px; }
+.search .clear:hover { background: var(--alt); color: var(--ink); }
+.filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.filter-row .filter-sel { width: 100%; min-width: 0; }
+.actions.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { .actions.two { grid-template-columns: 1fr; } }
+.eyebrow-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.fmt-tag.plain { color: var(--muted); border-color: var(--border); }
+.fmt-tag.plain::before { background: var(--muted); }
+.gist .muted { color: var(--muted); font-weight: 400; }
+.captions { flex-wrap: wrap; }
+details.slide { border: 1px solid var(--border); border-radius: 4px; background: var(--white); margin: 0 0 10px; }
+details.slide summary { cursor: pointer; user-select: none; -webkit-user-select: none; padding: 12px 44px 12px 14px; display: grid; gap: 3px; list-style: none; }
+details.slide summary::-webkit-details-marker { display: none; }
+details.slide summary .n { font-family: var(--mono); font-size: 11px; color: var(--cyan-mid); letter-spacing: 0.08em; }
+details.slide summary b { font-size: 14px; }
+details.slide .in { padding: 0 14px 14px; }
+details.override { margin-top: 10px; }
+details.override summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+details.override .in { padding-top: 8px; }
+details.override textarea { width: 100%; min-height: 160px; }
+.slide-fs { border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px 4px; margin: 0 0 14px; }
+.slide-fs legend { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--cyan-mid); padding: 0 6px; }
+.report { border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin: 0 0 14px; display: grid; gap: 4px; }
+.form details.adv { margin: 0 0 16px; }
+.settings code { font-family: var(--mono); font-size: 12px; background: var(--soft); padding: 1px 5px; border-radius: 3px; }
+.meta { color: var(--muted); font-weight: 400; font-size: 12.5px; }
+details.slide summary:hover { background: var(--soft); }
+/* One chevron for every collapsible row: slides, settings prompts, the JSON paste box. */
+details.slide summary, .settings summary, details.adv summary { position: relative; list-style: none; }
+details.slide summary::-webkit-details-marker, .settings summary::-webkit-details-marker, details.adv summary::-webkit-details-marker { display: none; }
+.settings summary, details.adv summary { padding-right: 44px; }
+details.slide summary::after, .settings summary::after, details.adv summary::after { content: ""; position: absolute; right: 14px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5' fill='none' stroke='%236B8FA3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / 16px; transition: transform 0.15s; }
+details.slide[open] summary::after, .settings details[open] summary::after, details.adv[open] summary::after { transform: rotate(180deg); }
+

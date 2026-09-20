@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Field, useToast } from "../ui";
-import { extract } from "../prompts";
 
 type Slide = { name: string; img: HTMLImageElement };
 type CounterMode = "all" | "skip1" | "none";
@@ -51,9 +50,9 @@ interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  logoW: 28, logoOpacity: 25, logoInset: 3,
+  logoW: 24.5, logoOpacity: 45, logoInset: 2,
   counter: "all",
-  counterSize: 2.8, counterOpacity: 60, counterInset: 5,
+  counterSize: 2.5, counterOpacity: 75, counterInset: 3,
 };
 
 function counterFor(idx: number, total: number, s: Settings): string | null {
@@ -151,7 +150,7 @@ export function StampView({ baseName }: { baseName: string | null }) {
     });
   };
   const fileBase = useMemo(() => {
-    const t = baseName ? extract(baseName, "Headline").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40) : "";
+    const t = baseName ?? "";
     return t || "carousel";
   }, [baseName]);
 

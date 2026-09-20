@@ -1,4 +1,4 @@
-import type { Bootstrap, Format, FormatInput, Idea, IdeaInput, Prompt, PromptKey, Status } from "./types";
+import type { Bootstrap, Idea, IdeaInput, Prompt, PromptKey, Status } from "./types";
 
 async function req<T>(url: string, method: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -17,18 +17,14 @@ async function req<T>(url: string, method: string, body?: unknown): Promise<T> {
   return json as T;
 }
 
+export type IdeaPatch = Partial<IdeaInput> & { status?: Status };
+
 export const api = {
   bootstrap: () => req<Bootstrap>("/api/bootstrap", "GET"),
 
   createIdea: (input: IdeaInput) => req<Idea>("/api/ideas", "POST", input),
-  updateIdea: (id: number, patch: Partial<IdeaInput> & { status?: Status }) =>
-    req<Idea>(`/api/ideas/${id}`, "PATCH", patch),
+  updateIdea: (id: number, patch: IdeaPatch) => req<Idea>(`/api/ideas/${id}`, "PATCH", patch),
   deleteIdea: (id: number) => req<void>(`/api/ideas/${id}`, "DELETE"),
-
-  createFormat: (input: FormatInput) => req<Format>("/api/formats", "POST", input),
-  updateFormat: (id: number, patch: Partial<FormatInput> & { hasMaster?: boolean }) =>
-    req<Format>(`/api/formats/${id}`, "PATCH", patch),
-  deleteFormat: (id: number) => req<void>(`/api/formats/${id}`, "DELETE"),
 
   savePrompt: (key: PromptKey, body: string) => req<Prompt>(`/api/prompts/${key}`, "PUT", { body }),
 };

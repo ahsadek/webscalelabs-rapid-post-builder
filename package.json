@@ -11,7 +11,10 @@
     "start": "NODE_ENV=production tsx server/index.ts",
     "db:migrate": "tsx server/migrate.ts",
     "db:seed": "tsx server/seed.ts",
-    "db:snapshot-defaults": "tsx server/snapshot-defaults.ts"
+    "db:snapshot-defaults": "tsx server/snapshot-defaults.ts",
+    "ideas:validate": "tsx scripts/ideas.ts validate",
+    "ideas:render": "tsx scripts/ideas.ts render",
+    "ideas:import": "tsx scripts/ideas.ts import"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
