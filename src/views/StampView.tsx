@@ -50,8 +50,8 @@ interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  logoW: 24.5, logoOpacity: 45, logoInset: 2,
-  counter: "all",
+  logoW: 20.8, logoOpacity: 100, logoInset: 4.2,
+  counter: "none",
   counterSize: 2.5, counterOpacity: 75, counterInset: 3,
 };
 
