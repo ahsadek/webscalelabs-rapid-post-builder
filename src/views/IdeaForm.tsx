@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import type { Idea, IdeaInput, Layout, Pillar, SlideSpec } from "../types";
-import { CAROUSEL_CTA, CAROUSEL_LAYOUTS, LAYOUTS, PILLARS, SLIDE_ROLES } from "../types";
+import type { Format, Idea, IdeaInput, Layout, Pillar, SlideSpec } from "../types";
+import { CAROUSEL_CTA, CAROUSEL_LAYOUTS, FORMATS, FORMAT_LABELS, LAYOUTS, PILLARS, SLIDE_ROLES } from "../types";
 import { validateIdea } from "../../shared/validate";
 import { Field, useToast } from "../ui";
 
@@ -15,9 +15,17 @@ type SlideDraft = { topic: string; headline: string; cyan: string; supporting: s
 type Draft = {
   title: string;
   pillar: Pillar;
+  format: Format;
   service: string;
   single: { headline: string; cyan: string; supporting: string; hero: string; layout: Layout };
   carousel: SlideDraft[];
+};
+
+const HERO_LABEL: Record<Format, string> = {
+  dark: "3D hero object or interface scene",
+  light: "3D hero object or interface scene",
+  people: "Photo scene: the person, their action, the setting and the shot",
+  scene: "Photo scene: the environment and objects, no people",
 };
 
 const emptySlide = (): SlideDraft => ({ topic: "", headline: "", cyan: "", supporting: "", hero: "" });
@@ -27,6 +35,7 @@ function fromIdea(i?: Idea): Draft {
     return {
       title: "",
       pillar: PILLARS[2],
+      format: "dark",
       service: "",
       single: { headline: "", cyan: "", supporting: "", hero: "", layout: "A" },
       carousel: [emptySlide(), emptySlide(), emptySlide(), emptySlide()],
@@ -34,6 +43,7 @@ function fromIdea(i?: Idea): Draft {
   return {
     title: i.title,
     pillar: i.pillar,
+    format: i.format ?? "dark",
     service: i.service ?? "",
     single: { ...i.single, headline: i.single.headline.join("\n") },
     carousel: i.carousel.map((s) => ({ ...s, headline: s.headline.join("\n") })),
@@ -53,6 +63,7 @@ function toInput(d: Draft): IdeaInput {
   return {
     title: d.title,
     pillar: d.pillar,
+    format: d.format,
     service: d.service || null,
     single: { ...d.single, headline: lines(d.single.headline) },
     carousel: d.carousel.map(slide),
@@ -116,11 +127,23 @@ export function IdeaForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
           <input id="fService" value={d.service} onChange={(e) => setD({ ...d, service: e.target.value })} placeholder="Google Ads" />
         </Field>
       </div>
-      <Field label="Content pillar" htmlFor="fPillar">
-        <select id="fPillar" value={d.pillar} onChange={(e) => setD({ ...d, pillar: e.target.value as Pillar })}>
-          {PILLARS.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-      </Field>
+      <div className="grid2">
+        <Field label="Content pillar" htmlFor="fPillar">
+          <select id="fPillar" value={d.pillar} onChange={(e) => setD({ ...d, pillar: e.target.value as Pillar })}>
+            {PILLARS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </Field>
+        <Field label="Visual format" htmlFor="fFormat">
+          <select id="fFormat" value={d.format} onChange={(e) => setD({ ...d, format: e.target.value as Format })}>
+            {FORMATS.map((f) => <option key={f} value={f}>{FORMAT_LABELS[f]}</option>)}
+          </select>
+        </Field>
+      </div>
+      {initial && d.format !== (initial.format ?? "dark") && (
+        <p className="hint" style={{ margin: "-4px 0 12px" }}>
+          The visual descriptions below were written for {FORMAT_LABELS[initial.format ?? "dark"]}. Rewrite them for {FORMAT_LABELS[d.format]} before saving.
+        </p>
+      )}
 
       <h3 className="section">Single-slide post</h3>
       <div className="grid2">
@@ -141,7 +164,7 @@ export function IdeaForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
       <Field label="Supporting line (sentence case, 8 to 12 words, adds new information)" htmlFor="sSup">
         <input id="sSup" value={d.single.supporting} onChange={(e) => patchSingle({ supporting: e.target.value })} placeholder="Track which campaigns turn enquiries into actual sales." />
       </Field>
-      <Field label="3D hero object or interface scene (concrete visual description)" htmlFor="sHero">
+      <Field label={`${HERO_LABEL[d.format]} (concrete visual description)`} htmlFor="sHero">
         <textarea id="sHero" style={{ minHeight: 120 }} value={d.single.hero} onChange={(e) => patchSingle({ hero: e.target.value })} />
       </Field>
 
@@ -169,7 +192,7 @@ export function IdeaForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
               <input id={`c${i}Sup`} value={s.supporting} onChange={(e) => patchSlide(i, { supporting: e.target.value })} />
             </Field>
           )}
-          <Field label="3D hero object or interface scene" htmlFor={`c${i}Hero`}>
+          <Field label={HERO_LABEL[d.format]} htmlFor={`c${i}Hero`}>
             <textarea id={`c${i}Hero`} style={{ minHeight: 110 }} value={s.hero} onChange={(e) => patchSlide(i, { hero: e.target.value })} />
           </Field>
         </fieldset>

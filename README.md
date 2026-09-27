@@ -40,6 +40,29 @@ change: the headline, the cyan word, the supporting line, the 3D hero object and
 - **Four caption prompts** (main profiles, Ahmed, Salman, Youssef) are shared and copied from the idea page. The
   post's text is appended under the prompt so the caption can be written even without attaching the image.
 
+### Visual formats
+
+Every idea has one of four formats, so the feed does not repeat one look. Each format has its own single-slide
+template, carousel template and three layout options in Settings, built verbatim from the team's documents.
+
+| Format | Visual | Paste into |
+| --- | --- | --- |
+| Dark 3D | 3D hero object on near-black (the original master prompt) | ChatGPT |
+| Light 3D | 3D hero object on white (Light Version document) | ChatGPT |
+| Photo with a person | editorial photograph with one fictional person (Image Background Version) | Gemini, Nano Banana Pro |
+| Photo without people | editorial photograph of a real environment (Human-Free Image Background Version) | ChatGPT |
+
+An idea's `hero` fields hold only the visual description for its own format. For the photo formats that is the
+content of the shot; the grade, palette, realism rules, typography and layout stay in the shared templates, so a
+style change is one edit in Settings.
+
+**A specific person.** On a photo-with-a-person idea, the switch "Put a specific person in this post" adds a shared
+block (editable in Settings) at the top of every prompt. It tells the generator to use the person in the photos
+attached to the chat and overrides the fictional-subject rules for that person only. Switched off, the prompt is
+exactly the colleague's template.
+
+**Light posts and the logo.** The Stamp page has a logo colour switch; "Navy" recolours the logo for white posts.
+
 The templates were generated verbatim from the master document (see `shared/defaults.ts`). Two sentences were added
 and can be removed in Settings if the team prefers: "Render only the text given in TEXT TO RENDER" in both templates,
 and on carousel slide 4 the sentence making the CTA URL an exception to the no-URL rule.
@@ -54,6 +77,8 @@ npm run ideas:validate                                  # every rule the master 
 npm run ideas:render -- content/ideas/<file>.json       # print the rendered prompts to read them as the generator would
 npm run ideas:import                                    # insert every valid file whose title is not in the bank yet
 npm run ideas:import -- --api https://<deployment>      # same, through POST /api/ideas/bulk
+npm run ideas:import -- --update                        # also replace the content of existing ideas (status kept)
+npm run ideas:export                                    # write the live bank to content/ideas (do this before editing files)
 ```
 
 Titles are unique, so re-importing is safe. Ideas already in the database are never overwritten by a file.
@@ -62,8 +87,8 @@ Titles are unique, so re-importing is safe. Ideas already in the database are ne
 
 | Thing | Where |
 | --- | --- |
-| Ideas (title, pillar, service, single spec, carousel spec, status Unused/Used) | table `post_ideas` |
-| Shared prompts (2 templates, 3 layout options, 4 caption prompts) | table `post_prompts`, editable in Settings with Reset to default |
+| Ideas (title, pillar, format, service, single spec, carousel spec, status Unused/Used) | table `post_ideas` |
+| Shared prompts (per format: 2 templates and 3 layout options; the specific-person block; 4 caption prompts) | table `post_prompts`, editable in Settings with Reset to default |
 | Defaults for Reset | `shared/defaults.ts`; refresh from the live DB with `npm run db:snapshot-defaults` |
 | Validation rules | `shared/validate.ts`, used by the API, the form and the CLI |
 | Prompt rendering | `shared/render.ts` |
@@ -78,6 +103,6 @@ The v1 tables (`formats`, `ideas`, `prompts`) are left in place and unused. Drop
 | GET | `/api/bootstrap` | – (ideas, prompts, defaults) |
 | POST | `/api/ideas` | a full idea (see `shared/types.ts`, `IdeaInput`) |
 | POST | `/api/ideas/bulk` | an array of ideas; returns `{ inserted, rejected }` |
-| PATCH | `/api/ideas/:id` | any of `title, pillar, service, single, carousel, status` |
+| PATCH | `/api/ideas/:id` | any of `title, pillar, format, service, single, carousel, status` |
 | DELETE | `/api/ideas/:id` | – |
 | PUT | `/api/prompts/:key` | `{ body }` |

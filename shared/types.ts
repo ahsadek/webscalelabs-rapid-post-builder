@@ -32,6 +32,30 @@ export const PILLARS = [
 ] as const;
 export type Pillar = (typeof PILLARS)[number];
 
+/**
+ * Visual formats. Each has its own single-slide template, carousel template and layout wording in the
+ * prompts table; an idea stores only the visual description ("hero") written for its format.
+ *   dark   : 3D hero object on near-black (the original master prompt)
+ *   light  : 3D hero object on white
+ *   people : full-bleed editorial photograph with one dominant person
+ *   scene  : full-bleed editorial photograph of a real environment, no people
+ */
+export const FORMATS = ["dark", "light", "people", "scene"] as const;
+export type Format = (typeof FORMATS)[number];
+export const FORMAT_LABELS: Record<Format, string> = {
+  dark: "Dark 3D",
+  light: "Light 3D",
+  people: "Photo with a person",
+  scene: "Photo without people",
+};
+/** Where the image prompt is pasted. Gemini handles people better in the team's tests. */
+export const FORMAT_TOOL: Record<Format, string> = {
+  dark: "ChatGPT",
+  light: "ChatGPT",
+  people: "Gemini (Nano Banana Pro)",
+  scene: "ChatGPT",
+};
+
 export type Layout = "A" | "B" | "C";
 export const LAYOUTS: Layout[] = ["A", "B", "C"];
 
@@ -66,6 +90,8 @@ export interface SlideSpec {
 export interface IdeaInput {
   title: string;
   pillar: Pillar;
+  /** Visual format; defaults to "dark" when missing. */
+  format?: Format;
   /** Optional: the service the post is about, for filtering. */
   service?: string | null;
   single: SingleSpec;
@@ -74,11 +100,14 @@ export interface IdeaInput {
 
 export interface Idea extends IdeaInput {
   id: number;
+  format: Format;
   service: string | null;
   status: Status;
   createdAt: string;
   updatedAt: string;
 }
+
+type FormatPromptKey<P extends string> = `${P}Single` | `${P}Carousel` | `${P}LayoutA` | `${P}LayoutB` | `${P}LayoutC`;
 
 export type PromptKey =
   | "singleTemplate"
@@ -86,10 +115,22 @@ export type PromptKey =
   | "layoutA"
   | "layoutB"
   | "layoutC"
+  | FormatPromptKey<"light">
+  | FormatPromptKey<"people">
+  | FormatPromptKey<"scene">
+  | "peopleReference"
   | "captionMain"
   | "captionAhmed"
   | "captionSalman"
   | "captionYoussef";
+
+/** Which prompt rows each format uses. Dark keeps its original key names. */
+export const FORMAT_PROMPTS: Record<Format, { single: PromptKey; carousel: PromptKey; layout: Record<Layout, PromptKey> }> = {
+  dark: { single: "singleTemplate", carousel: "carouselTemplate", layout: { A: "layoutA", B: "layoutB", C: "layoutC" } },
+  light: { single: "lightSingle", carousel: "lightCarousel", layout: { A: "lightLayoutA", B: "lightLayoutB", C: "lightLayoutC" } },
+  people: { single: "peopleSingle", carousel: "peopleCarousel", layout: { A: "peopleLayoutA", B: "peopleLayoutB", C: "peopleLayoutC" } },
+  scene: { single: "sceneSingle", carousel: "sceneCarousel", layout: { A: "sceneLayoutA", B: "sceneLayoutB", C: "sceneLayoutC" } },
+};
 
 export const CAPTION_KEYS: { key: PromptKey; short: string }[] = [
   { key: "captionMain", short: "Main profiles" },

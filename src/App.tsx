@@ -37,7 +37,7 @@ function Shell() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
   const [route, setRoute] = useState<Route>(parseHash);
-  const [filters, setFilters] = useState<Filters>({ q: "", status: "All", pillar: "All", service: "All" });
+  const [filters, setFilters] = useState<Filters>({ q: "", status: "All", pillar: "All", service: "All", format: "All" });
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {

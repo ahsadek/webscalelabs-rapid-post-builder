@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { Bootstrap, Prompt, PromptKey } from "../types";
+import type { Bootstrap, Format, Prompt, PromptKey } from "../types";
+import { FORMATS, FORMAT_LABELS, FORMAT_PROMPTS } from "../types";
 
 interface Props {
   prompts: Prompt[];
@@ -7,22 +8,35 @@ interface Props {
   onSavePrompt: (key: PromptKey, body: string) => Promise<unknown>;
 }
 
-const TEMPLATE_KEYS: PromptKey[] = ["singleTemplate", "carouselTemplate", "layoutA", "layoutB", "layoutC"];
+/** The rows each format owns, in display order. The reference-person block belongs to the people format. */
+const keysFor = (f: Format): PromptKey[] => {
+  const k = FORMAT_PROMPTS[f];
+  return [k.single, k.carousel, k.layout.A, k.layout.B, k.layout.C, ...(f === "people" ? (["peopleReference"] as PromptKey[]) : [])];
+};
+const TEMPLATE_KEYS = new Set(FORMATS.flatMap(keysFor));
 
 export function SettingsView({ prompts, defaults, onSavePrompt }: Props) {
-  const templates = prompts.filter((p) => TEMPLATE_KEYS.includes(p.key));
-  const captions = prompts.filter((p) => !TEMPLATE_KEYS.includes(p.key));
+  const byKey = new Map(prompts.map((p) => [p.key, p]));
+  const captions = prompts.filter((p) => !TEMPLATE_KEYS.has(p.key));
   return (
     <section className="settings">
       <h2 className="page-title">Shared prompts.</h2>
-      <p className="lead">Everything here is shared: a change saves to the database and every teammate sees it on their next load. The two image templates wrap every idea in the bank, so one edit here changes every single-slide and carousel prompt at once. Changing them is a team decision.</p>
+      <p className="lead">Everything here is shared: a change saves to the database and every teammate sees it on their next load. Each visual format has its own templates, and they wrap every idea of that format, so one edit here changes every single-slide or carousel prompt of that format at once. Changing them is a team decision.</p>
 
       <h3 className="section">Image prompt templates</h3>
       <p className="hint" style={{ margin: "0 0 12px" }}>
         The variable parts are placeholders the app fills from each idea: <code>{"{{hero}}"}</code>, <code>{"{{layout}}"}</code>, <code>{"{{headline}}"}</code>, <code>{"{{cyan}}"}</code>, <code>{"{{supporting}}"}</code>, and for carousels <code>{"{{n}}"}</code>, <code>{"{{topic}}"}</code> and the <code>{"{{#cta}}"}</code> block that only renders on slide 4. Keep them.
       </p>
-      {templates.map((p) => (
-        <PromptEditor key={p.key} label={p.label} value={p.body} dflt={defaults.prompts[p.key]} onSave={(v) => onSavePrompt(p.key, v)} />
+      {FORMATS.map((f) => (
+        <div key={f} className="format-group">
+          <h4 className="format-title">{FORMAT_LABELS[f]}</h4>
+          {keysFor(f)
+            .map((k) => byKey.get(k))
+            .filter((p): p is Prompt => Boolean(p))
+            .map((p) => (
+              <PromptEditor key={p.key} label={p.label} value={p.body} dflt={defaults.prompts[p.key]} onSave={(v) => onSavePrompt(p.key, v)} />
+            ))}
+        </div>
       ))}
 
       <h3 className="section">Caption prompts</h3>

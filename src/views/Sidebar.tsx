@@ -1,11 +1,12 @@
-import type { Idea, Pillar, Status } from "../types";
-import { PILLARS, PILLAR_COLORS, PILLAR_SHORT, SERVICES, STATUSES } from "../types";
+import type { Format, Idea, Pillar, Status } from "../types";
+import { FORMATS, FORMAT_LABELS, PILLARS, PILLAR_COLORS, PILLAR_SHORT, SERVICES, STATUSES } from "../types";
 
 export interface Filters {
   q: string;
   status: Status | "All";
   pillar: Pillar | "All";
   service: string | "All";
+  format: Format | "All";
 }
 
 interface Props {
@@ -24,6 +25,7 @@ export function applyFilters(ideas: Idea[], f: Filters): Idea[] {
       (f.status === "All" || i.status === f.status) &&
       (f.pillar === "All" || i.pillar === f.pillar) &&
       (f.service === "All" || i.service === f.service) &&
+      (f.format === "All" || i.format === f.format) &&
       (!q ||
         i.title.toLowerCase().includes(q) ||
         (i.service ?? "").toLowerCase().includes(q) ||
@@ -67,12 +69,20 @@ export function Sidebar({ ideas, filters, onFilters, currentId, onSelect, onNew 
             ))}
           </select>
         </div>
-        <select className="filter-sel" value={filters.service} onChange={(e) => set({ service: e.target.value })} aria-label="Service">
-          <option value="All">All services</option>
-          {SERVICES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+        <div className="filter-row">
+          <select className="filter-sel" value={filters.service} onChange={(e) => set({ service: e.target.value })} aria-label="Service">
+            <option value="All">All services</option>
+            {SERVICES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <select className="filter-sel" value={filters.format} onChange={(e) => set({ format: e.target.value as Filters["format"] })} aria-label="Format">
+            <option value="All">All formats</option>
+            {FORMATS.map((f) => (
+              <option key={f} value={f}>{FORMAT_LABELS[f]}</option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="side-bar">
         <span>
@@ -95,7 +105,7 @@ export function Sidebar({ ideas, filters, onFilters, currentId, onSelect, onNew 
               <span className="t">{i.title}</span>
               <span className={"st " + i.status.toLowerCase()}>{i.status.toUpperCase()}</span>
               <span className="m">
-                #{i.id} · {PILLAR_SHORT[i.pillar] ?? i.pillar}
+                #{i.id} · {FORMAT_LABELS[i.format] ?? i.format} · {PILLAR_SHORT[i.pillar] ?? i.pillar}
                 {i.service ? ` · ${i.service}` : ""}
               </span>
             </button>

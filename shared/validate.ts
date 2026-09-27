@@ -2,7 +2,7 @@
  * Checks a post idea against the master prompt's rules. Used by the API (on write), the UI form
  * (live) and the ideas CLI (before import). Errors block a save; warnings are advisory.
  */
-import { CAROUSEL_CTA, LAYOUTS, PILLARS, type IdeaInput, type SingleSpec, type SlideSpec } from "./types.js";
+import { CAROUSEL_CTA, FORMATS, LAYOUTS, PILLARS, type Format, type IdeaInput, type SingleSpec, type SlideSpec } from "./types.js";
 
 export interface Report {
   errors: string[];
@@ -66,16 +66,32 @@ function checkSupporting(where: string, s: unknown, r: Report) {
   if (/\d+\s?%|\d+x\b/i.test(s)) r.warnings.push(`${where}: contains a figure; make sure it is not an unsupported performance claim`);
 }
 
-function checkHero(where: string, s: unknown, r: Report) {
+const PERSON_WORDS = /\b(person|people|man|woman|men|women|founder|owner|marketer|designer|developer|strategist|analyst|creator|editor|salesperson|customer|he|she|his|her|him|they|their|hands?|arms?|face|eyes|fingers?|someone|colleague|team|worker|staff|client)\b/i;
+
+/** Words that put a human in the frame. Roles used as possessives ("founder's desk") are fine in a scene. */
+const HUMAN_BODY = /\b(person|people|human|man|woman|men|women|he|she|his|her|him|hands?|arms?|faces?|fingers?|someone|silhouettes?|body|bodies|figure)\b/i;
+
+function checkHero(where: string, s: unknown, r: Report, format: Format) {
   if (!checkText(where, s, r)) return;
   const n = words(s).length;
-  if (n < 40) r.warnings.push(`${where}: ${n} words; the hero description should be concrete and detailed (aim for 60 to 140)`);
-  if (n > 220) r.warnings.push(`${where}: ${n} words; keep it to one recognisable scene`);
-  if (/\b(google|meta|facebook|instagram|linkedin|shopify|hubspot|salesforce|wordpress)\b/i.test(s))
-    r.warnings.push(`${where}: names a third-party brand; interfaces must be generic and unbranded`);
+  const photo = format === "people" || format === "scene";
+  const [min, aim, max] = photo ? [50, "70 to 170", 240] : [40, "60 to 140", 220];
+  if (n < min) r.warnings.push(`${where}: ${n} words; the description should be concrete and detailed (aim for ${aim})`);
+  if (n > max) r.warnings.push(`${where}: ${n} words; keep it to one recognisable scene`);
+  if (/\b(google|meta|facebook|instagram|linkedin|shopify|hubspot|salesforce|wordpress|whatsapp|tiktok|snapchat|apple|iphone|macbook)\b/i.test(s))
+    r.warnings.push(`${where}: names a third-party brand; devices and interfaces must be generic and unbranded`);
+  if (photo && /#[0-9a-f]{6}\b/i.test(s))
+    r.warnings.push(`${where}: contains a colour code; the photo templates set the grade and palette, keep colours out of the scene so a style change stays one edit`);
+  if (photo && /\b(3D|CGI|render(ed)?|hologra\w*|floating)\b/i.test(s))
+    r.errors.push(`${where}: describes a 3D render, hologram or floating element; photo formats must be a real photographed scene`);
+  const stripped = s.replace(/\b(no|without|free of|absent of) (people|persons?|humans?|one|hands?|figures?)\b/gi, "");
+  if (format === "scene" && HUMAN_BODY.test(stripped))
+    r.errors.push(`${where}: mentions a person or body part ("${stripped.match(HUMAN_BODY)?.[0]}"); photo-without-people scenes must contain no humans`);
+  if (format === "people" && !PERSON_WORDS.test(s))
+    r.warnings.push(`${where}: does not seem to describe a person; photo-with-a-person scenes need one dominant subject`);
 }
 
-export function checkSingle(single: unknown, r: Report, where = "single") {
+export function checkSingle(single: unknown, r: Report, format: Format = "dark", where = "single") {
   if (!single || typeof single !== "object") {
     r.errors.push(`${where}: missing`);
     return;
@@ -83,11 +99,11 @@ export function checkSingle(single: unknown, r: Report, where = "single") {
   const s = single as Partial<SingleSpec>;
   checkHeadline(where, s.headline, s.cyan, r);
   checkSupporting(`${where}.supporting`, s.supporting, r);
-  checkHero(`${where}.hero`, s.hero, r);
+  checkHero(`${where}.hero`, s.hero, r, format);
   if (!LAYOUTS.includes(s.layout as never)) r.errors.push(`${where}.layout: must be A, B or C`);
 }
 
-export function checkCarousel(carousel: unknown, r: Report, where = "carousel") {
+export function checkCarousel(carousel: unknown, r: Report, format: Format = "dark", where = "carousel") {
   if (!Array.isArray(carousel) || carousel.length !== 4) {
     r.errors.push(`${where}: must be exactly 4 slides`);
     return;
@@ -111,7 +127,7 @@ export function checkCarousel(carousel: unknown, r: Report, where = "carousel") 
     } else {
       checkSupporting(`${w}.supporting`, s.supporting, r);
     }
-    checkHero(`${w}.hero`, s.hero, r);
+    checkHero(`${w}.hero`, s.hero, r, format);
     if (isStr(s.hero)) heroes.push(s.hero.trim().toLowerCase());
   });
   if (new Set(heroes).size !== heroes.length) r.errors.push(`${where}: two slides share the same hero description; every slide needs a different object`);
@@ -127,8 +143,10 @@ export function validateIdea(input: unknown): Report {
   if (checkText("title", i.title, r) && i.title.trim().length > 90) r.warnings.push("title: keep it short, it is the sidebar label");
   if (!PILLARS.includes(i.pillar as never)) r.errors.push(`pillar: must be one of: ${PILLARS.join(" | ")}`);
   if (i.service != null && i.service !== "" && !isStr(i.service)) r.errors.push("service: must be a string");
-  checkSingle(i.single, r);
-  checkCarousel(i.carousel, r);
+  if (i.format != null && !FORMATS.includes(i.format)) r.errors.push(`format: must be one of ${FORMATS.join(", ")}`);
+  const format: Format = FORMATS.includes(i.format as Format) ? (i.format as Format) : "dark";
+  checkSingle(i.single, r, format);
+  checkCarousel(i.carousel, r, format);
   return r;
 }
 
@@ -145,6 +163,7 @@ export function normalizeIdea(input: IdeaInput): IdeaInput {
   return {
     title: t(input.title),
     pillar: input.pillar,
+    format: input.format ?? "dark",
     service: input.service ? t(input.service) : null,
     single: {
       headline: input.single.headline.map(t),

@@ -10,7 +10,7 @@ export const app = express();
 app.use(express.json({ limit: "20mb" }));
 
 const IDEA_COLS =
-  'id, title, pillar, service, single, carousel, status, created_at AS "createdAt", updated_at AS "updatedAt"';
+  'id, title, pillar, format, service, single, carousel, status, created_at AS "createdAt", updated_at AS "updatedAt"';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -54,9 +54,9 @@ app.post(
   wrap(async (req, res) => {
     const idea = parseIdea(req.body);
     const { rows } = await query(
-      `INSERT INTO post_ideas (title, pillar, service, single, carousel)
-       VALUES ($1, $2, $3, $4, $5) RETURNING ${IDEA_COLS}`,
-      [idea.title, idea.pillar, idea.service, idea.single, JSON.stringify(idea.carousel)],
+      `INSERT INTO post_ideas (title, pillar, format, service, single, carousel)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING ${IDEA_COLS}`,
+      [idea.title, idea.pillar, idea.format, idea.service, idea.single, JSON.stringify(idea.carousel)],
     );
     res.status(201).json(rows[0]);
   }),
@@ -81,9 +81,9 @@ app.post(
       }
       const idea = normalizeIdea(raw as IdeaInput);
       const { rows } = await query(
-        `INSERT INTO post_ideas (title, pillar, service, single, carousel)
-         VALUES ($1, $2, $3, $4, $5) ON CONFLICT (title) DO NOTHING RETURNING ${IDEA_COLS}`,
-        [idea.title, idea.pillar, idea.service, idea.single, JSON.stringify(idea.carousel)],
+        `INSERT INTO post_ideas (title, pillar, format, service, single, carousel)
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (title) DO NOTHING RETURNING ${IDEA_COLS}`,
+        [idea.title, idea.pillar, idea.format, idea.service, idea.single, JSON.stringify(idea.carousel)],
       );
       if (rows[0]) inserted.push(rows[0]);
       else rejected.push({ index, title, reason: "an idea with this title already exists" });
@@ -110,7 +110,7 @@ app.patch(
       if (!STATUSES.includes(req.body.status as Status)) throw bad("status must be Unused or Used");
       add("status", req.body.status);
     }
-    const contentKeys = ["title", "pillar", "service", "single", "carousel"] as const;
+    const contentKeys = ["title", "pillar", "format", "service", "single", "carousel"] as const;
     if (contentKeys.some((k) => req.body[k] !== undefined)) {
       // Merge onto the stored row and validate the whole idea, so a partial patch can never leave it inconsistent.
       const merged: Record<string, unknown> = { ...existing[0] };
@@ -118,6 +118,7 @@ app.patch(
       const idea = parseIdea(merged);
       add("title", idea.title);
       add("pillar", idea.pillar);
+      add("format", idea.format);
       add("service", idea.service);
       add("single", idea.single);
       add("carousel", JSON.stringify(idea.carousel));

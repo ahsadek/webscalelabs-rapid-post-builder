@@ -231,3 +231,10 @@ details.slide summary::-webkit-details-marker, .settings summary::-webkit-detail
 details.slide summary::after, .settings summary::after, details.adv summary::after { content: ""; position: absolute; right: 14px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5' fill='none' stroke='%236B8FA3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / 16px; transition: transform 0.15s; }
 details.slide[open] summary::after, .settings details[open] summary::after, details.adv[open] summary::after { transform: rotate(180deg); }
 
+.fmt-tag.format { color: var(--ink); border-color: var(--ink); }
+.fmt-tag.format::before { background: var(--ink); }
+.panel.person { padding-top: 14px; padding-bottom: 14px; }
+.panel.person label { cursor: pointer; }
+.format-group { margin: 0 0 18px; }
+.format-title { font-family: var(--display); font-weight: 400; font-size: 22px; letter-spacing: 0.02em; color: var(--ink); margin: 18px 0 8px; }
+.logo-tone { margin: 14px 0 0; }

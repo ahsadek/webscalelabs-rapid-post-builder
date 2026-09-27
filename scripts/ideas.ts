@@ -5,6 +5,8 @@
  *   npm run ideas:render -- <file>    print the rendered prompts for one file, using the default templates
  *   npm run ideas:import              insert every valid file whose title is not in the database yet
  *   npm run ideas:import -- --api https://host   same, but through POST /api/ideas/bulk instead of the database
+ *   npm run ideas:import -- --update  also replace the content of ideas that already exist (status is kept)
+ *   npm run ideas:export              write every idea in the database to content/ideas/ (the database is the source of truth)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -16,6 +18,8 @@ import { normalizeIdea, validateIdea } from "../shared/validate.js";
 const [cmd, ...args] = process.argv.slice(2);
 const IDEAS_DIR = path.resolve("content", "ideas");
 const prompts = Object.fromEntries(DEFAULT_PROMPTS.map((p) => [p.key, p.body])) as PromptMap;
+
+const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 function files(): string[] {
   if (!fs.existsSync(IDEAS_DIR)) return [];
@@ -108,14 +112,38 @@ async function main() {
     }
     const { importIdeas } = await import("../server/seed.js");
     const { pool } = await import("../server/db.js");
-    const r = await importIdeas(ideas);
+    const update = args.includes("--update");
+    const r = await importIdeas(ideas, { update });
     await pool.end();
-    console.log(`Inserted ${r.inserted.length}, already present ${r.skipped.length}.`);
-    for (const t of r.skipped) console.log(`  already present: ${t}`);
+    console.log(`Inserted ${r.inserted.length}, updated ${r.updated.length}, already present ${r.skipped.length}.`);
+    if (!update) for (const t of r.skipped) console.log(`  already present: ${t}`);
     return;
   }
 
-  console.log("Usage: ideas validate | render <file> [single|carousel|caption] | import [--api URL]");
+  if (cmd === "export") {
+    const { pool } = await import("../server/db.js");
+    const { rows } = await pool.query(`SELECT title, pillar, format, service, single, carousel FROM post_ideas ORDER BY id`);
+    await pool.end();
+    fs.mkdirSync(IDEAS_DIR, { recursive: true });
+    // Keep existing file names where a file already holds the same title.
+    const byTitle = new Map<string, string>();
+    for (const f of files()) {
+      try {
+        byTitle.set(String(JSON.parse(fs.readFileSync(f, "utf8")).title).toLowerCase(), f);
+      } catch {
+        /* unreadable file: a fresh name is used */
+      }
+    }
+    for (const r of rows) {
+      const file = byTitle.get(r.title.toLowerCase()) ?? path.join(IDEAS_DIR, slugify(r.title) + ".json");
+      const idea = { title: r.title, pillar: r.pillar, format: r.format, service: r.service ?? undefined, single: r.single, carousel: r.carousel };
+      fs.writeFileSync(file, JSON.stringify(idea, null, 2) + "\n");
+    }
+    console.log(`Exported ${rows.length} idea(s) to ${path.relative(process.cwd(), IDEAS_DIR)}.`);
+    return;
+  }
+
+  console.log("Usage: ideas validate | render <file> [single|carousel|caption] | import [--update] [--api URL] | export");
   process.exit(1);
 }
 

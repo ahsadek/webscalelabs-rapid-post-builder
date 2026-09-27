@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Idea, PromptKey, PromptMap, Status } from "../types";
-import { CAPTION_KEYS, PILLAR_COLORS, STATUSES } from "../types";
-import { renderCaption, renderCarousel, renderSingle } from "../../shared/render";
+import { CAPTION_KEYS, FORMAT_LABELS, FORMAT_TOOL, PILLAR_COLORS, STATUSES } from "../types";
+import { formatOf, renderCaption, renderCarousel, renderSingle } from "../../shared/render";
 import { OutBlock, copyText, useToast } from "../ui";
 
 type Variant = "single" | "carousel";
@@ -17,7 +17,11 @@ interface Props {
 
 export function IdeaDetail({ idea, prompts, onStatus, onEdit, onDelete, onBack }: Props) {
   const [variant, setVariant] = useState<Variant | null>(null);
+  const [referencePerson, setReferencePerson] = useState(false);
   const toast = useToast();
+  const format = formatOf(idea);
+  const tool = FORMAT_TOOL[format];
+  const opts = { referencePerson };
 
   const copyCaption = (key: PromptKey) => {
     if (!variant) return;
@@ -28,6 +32,7 @@ export function IdeaDetail({ idea, prompts, onStatus, onEdit, onDelete, onBack }
     <div className="detail" style={{ "--fmt": PILLAR_COLORS[idea.pillar] } as React.CSSProperties}>
       <button className="btn ghost sm back" onClick={onBack}>← All ideas</button>
       <div className="eyebrow-row">
+        <span className="fmt-tag format">{FORMAT_LABELS[format]}</span>
         <span className="fmt-tag">{idea.pillar}</span>
         {idea.service && <span className="fmt-tag plain">{idea.service}</span>}
       </div>
@@ -63,19 +68,33 @@ export function IdeaDetail({ idea, prompts, onStatus, onEdit, onDelete, onBack }
         </button>
       </div>
 
+      {variant && format === "people" && (
+        <div className="panel person">
+          <div className="row check" style={{ margin: 0 }}>
+            <input type="checkbox" id="refPerson" checked={referencePerson} onChange={(e) => setReferencePerson(e.target.checked)} />
+            <label htmlFor="refPerson"><b>Put a specific person in this post</b></label>
+          </div>
+          <p className="hint" style={{ margin: "6px 0 0" }}>
+            {referencePerson
+              ? `Attach one or a few clear photos of the person (face and body) to the ${tool} message along with each prompt. The prompts below now tell the generator to use that person and keep everything else from the scene.`
+              : "Off: the generator invents a fictional person, exactly as the template describes. Switch on to use a co-founder or anyone else from photos you attach."}
+          </p>
+        </div>
+      )}
+
       {variant === "single" && (
         <div className="panel">
           <h3>Single-slide image prompt</h3>
-          <p>Paste into a new ChatGPT conversation and generate.</p>
-          <OutBlock text={renderSingle(idea, prompts)} label=" Proofread the generated image's text character for character, then stamp the logo and the counter." />
+          <p>Paste into a new {tool} conversation and generate.{format === "people" ? " Gemini renders people better than ChatGPT." : ""}</p>
+          <OutBlock text={renderSingle(idea, prompts, opts)} label=" Proofread the generated image's text character for character, then stamp the logo and the counter." />
         </div>
       )}
 
       {variant === "carousel" && (
         <div className="panel">
           <h3>Carousel image prompts</h3>
-          <p>One prompt per slide. Generate each in the same ChatGPT conversation so the four stay consistent, and attach slide 1 as the reference for the others if the style drifts.</p>
-          {renderCarousel(idea, prompts).map((text, i) => (
+          <p>One prompt per slide. Generate each in the same {tool} conversation so the four stay consistent, and attach slide 1 as the reference for the others if the style drifts.</p>
+          {renderCarousel(idea, prompts, opts).map((text, i) => (
             <details key={i} className="slide">
               <summary>
                 <span className="n">SLIDE {i + 1}</span>

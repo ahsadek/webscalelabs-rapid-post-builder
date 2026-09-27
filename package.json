@@ -14,7 +14,8 @@
     "db:snapshot-defaults": "tsx server/snapshot-defaults.ts",
     "ideas:validate": "tsx scripts/ideas.ts validate",
     "ideas:render": "tsx scripts/ideas.ts render",
-    "ideas:import": "tsx scripts/ideas.ts import"
+    "ideas:import": "tsx scripts/ideas.ts import",
+    "ideas:export": "tsx scripts/ideas.ts export"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

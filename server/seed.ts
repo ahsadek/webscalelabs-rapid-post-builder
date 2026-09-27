@@ -23,19 +23,34 @@ export function loadIdeaFiles(): { file: string; idea: IdeaInput }[] {
   return out;
 }
 
-/** Inserts ideas that are not in the table yet (matched by title). Returns how many went in. */
-export async function importIdeas(ideas: IdeaInput[]): Promise<{ inserted: string[]; skipped: string[] }> {
+/**
+ * Inserts ideas that are not in the table yet (matched by title). With update: true, ideas that already
+ * exist get their content (pillar, format, service, single, carousel) replaced; their status is kept.
+ */
+export async function importIdeas(
+  ideas: IdeaInput[],
+  { update = false } = {},
+): Promise<{ inserted: string[]; updated: string[]; skipped: string[] }> {
   const inserted: string[] = [];
+  const updated: string[] = [];
   const skipped: string[] = [];
   for (const idea of ideas) {
-    const { rowCount } = await pool.query(
-      `INSERT INTO post_ideas (title, pillar, service, single, carousel)
-       VALUES ($1, $2, $3, $4, $5) ON CONFLICT (title) DO NOTHING`,
-      [idea.title, idea.pillar, idea.service, idea.single, JSON.stringify(idea.carousel)],
+    const { rows } = await pool.query<{ inserted: boolean }>(
+      `INSERT INTO post_ideas (title, pillar, format, service, single, carousel)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (title) DO ${
+         update
+           ? `UPDATE SET pillar = EXCLUDED.pillar, format = EXCLUDED.format, service = EXCLUDED.service,
+              single = EXCLUDED.single, carousel = EXCLUDED.carousel, updated_at = now()`
+           : "NOTHING"
+       }
+       RETURNING (xmax = 0) AS inserted`,
+      [idea.title, idea.pillar, idea.format ?? "dark", idea.service, idea.single, JSON.stringify(idea.carousel)],
     );
-    (rowCount ? inserted : skipped).push(idea.title);
+    if (!rows[0]) skipped.push(idea.title);
+    else (rows[0].inserted ? inserted : updated).push(idea.title);
   }
-  return { inserted, skipped };
+  return { inserted, updated, skipped };
 }
 
 /**

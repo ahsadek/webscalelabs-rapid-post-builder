@@ -2,7 +2,7 @@
  * Turns an idea plus the shared templates into the exact text to paste into the image generator
  * or the caption chat. Pure functions, used by the UI and the ideas CLI.
  */
-import { CAPTION_KEYS, CAROUSEL_LAYOUTS, SLIDE_ROLES, type Idea, type IdeaInput, type PromptKey, type PromptMap } from "./types.js";
+import { CAPTION_KEYS, CAROUSEL_LAYOUTS, FORMAT_PROMPTS, SLIDE_ROLES, type Format, type Idea, type IdeaInput, type PromptKey, type PromptMap } from "./types.js";
 
 /** Minimal mustache: {{key}}, {{#flag}}...{{/flag}} (kept when true) and {{^flag}}...{{/flag}} (kept when false). */
 export function fill(template: string, vars: Record<string, string | boolean>): string {
@@ -19,33 +19,50 @@ export function fill(template: string, vars: Record<string, string | boolean>): 
 
 const headlineText = (lines: string[]) => lines.map((l) => l.trim()).join(" / ");
 
-export function renderSingle(idea: IdeaInput, prompts: PromptMap): string {
+export const formatOf = (idea: Pick<IdeaInput, "format">): Format => idea.format ?? "dark";
+
+export interface RenderOptions {
+  /** Photo-with-a-person only: the subject is the real person in the photos attached to the chat. */
+  referencePerson?: boolean;
+}
+
+/** The shared reference-person block goes first, so it frames every rule that follows. */
+function withReference(idea: IdeaInput, text: string, prompts: PromptMap, opts?: RenderOptions): string {
+  if (!opts?.referencePerson || formatOf(idea) !== "people" || !prompts.peopleReference) return text;
+  return prompts.peopleReference + "\n\n" + text;
+}
+
+export function renderSingle(idea: IdeaInput, prompts: PromptMap, opts?: RenderOptions): string {
   const s = idea.single;
-  return fill(prompts.singleTemplate, {
+  const keys = FORMAT_PROMPTS[formatOf(idea)];
+  const text = fill(prompts[keys.single], {
     hero: s.hero,
-    layout: prompts[`layout${s.layout}` as PromptKey],
+    layout: prompts[keys.layout[s.layout]],
     headline: headlineText(s.headline),
     cyan: s.cyan,
     supporting: s.supporting,
   });
+  return withReference(idea, text, prompts, opts);
 }
 
-export function renderSlide(idea: IdeaInput, index: number, prompts: PromptMap): string {
+export function renderSlide(idea: IdeaInput, index: number, prompts: PromptMap, opts?: RenderOptions): string {
   const s = idea.carousel[index];
-  return fill(prompts.carouselTemplate, {
+  const keys = FORMAT_PROMPTS[formatOf(idea)];
+  const text = fill(prompts[keys.carousel], {
     n: String(index + 1),
     topic: s.topic.replace(/\.$/, ""),
     hero: s.hero,
-    layout: prompts[`layout${CAROUSEL_LAYOUTS[index]}` as PromptKey],
+    layout: prompts[keys.layout[CAROUSEL_LAYOUTS[index]]],
     headline: headlineText(s.headline),
     cyan: s.cyan,
     supporting: s.supporting,
     cta: index === 3,
   });
+  return withReference(idea, text, prompts, opts);
 }
 
-export const renderCarousel = (idea: IdeaInput, prompts: PromptMap): string[] =>
-  idea.carousel.map((_s, i) => renderSlide(idea, i, prompts));
+export const renderCarousel = (idea: IdeaInput, prompts: PromptMap, opts?: RenderOptions): string[] =>
+  idea.carousel.map((_s, i) => renderSlide(idea, i, prompts, opts));
 
 /**
  * A caption prompt for the given profile. The master prompt expects the image to be attached; the
