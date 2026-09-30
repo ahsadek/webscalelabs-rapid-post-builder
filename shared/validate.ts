@@ -35,6 +35,7 @@ function checkHeadline(where: string, headline: unknown, cyan: unknown, r: Repor
   if (lines.some((l) => !l)) r.errors.push(`${where}.headline: empty line`);
   if (lines.length < 2 || lines.length > 3) r.errors.push(`${where}.headline: must be 2 or 3 lines, got ${lines.length}`);
   const full = lines.join(" ");
+  if (RENDERED_BRAND.test(full)) r.errors.push(`${where}.headline: names "${full.match(RENDERED_BRAND)?.[0]}"; the image templates forbid brand names in the rendered text`);
   if (!/\.$/.test(full)) r.errors.push(`${where}.headline: must end with a full stop`);
   if (lines.slice(0, -1).some((l) => /\.$/.test(l))) r.warnings.push(`${where}.headline: a line before the last ends with a full stop`);
   if (full !== full.toUpperCase()) r.errors.push(`${where}.headline: must be ALL CAPS`);
@@ -54,8 +55,24 @@ function checkHeadline(where: string, headline: unknown, cyan: unknown, r: Repor
   if (!re.test(full)) r.errors.push(`${where}.cyan: "${c}" does not appear as a whole word in the headline`);
 }
 
-function checkSupporting(where: string, s: unknown, r: Report) {
+const STOP = new Set("a an the and or but of to in on for with at by from your you it its is are be this that these those not no our their than then into over as".split(" "));
+const stem = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/(ing|ers|er|ies|es|s|ed)$/, "");
+const contentWords = (s: string) => words(s).map(stem).filter((w) => w.length > 2 && !STOP.has(w));
+
+/** Share of the supporting line's content words that already appear in the headline. */
+export function headlineOverlap(headline: string[], supporting: string): number {
+  const h = new Set(contentWords(headline.join(" ")));
+  const sw = contentWords(supporting);
+  if (!sw.length) return 0;
+  return sw.filter((w) => h.has(w)).length / sw.length;
+}
+
+function checkSupporting(where: string, s: unknown, r: Report, headline?: unknown) {
   if (!checkText(where, s, r)) return;
+  if (Array.isArray(headline) && headline.every(isStr)) {
+    const o = headlineOverlap(headline, s);
+    if (o >= 0.3) r.warnings.push(`${where}: reuses ${Math.round(o * 100)}% of the headline's words; it should give an action step or an offer, not restate the headline`);
+  }
   const n = words(s).length;
   if (n > 14) r.errors.push(`${where}: ${n} words, the maximum is 14`);
   else if (n > 12) r.warnings.push(`${where}: ${n} words, aim for 8 to 12`);
@@ -64,7 +81,11 @@ function checkSupporting(where: string, s: unknown, r: Report) {
   if (s.trim() !== s.trim().replace(/\s+/g, " ")) r.warnings.push(`${where}: has double spaces or line breaks`);
   if (/\b(we|our)\b/i.test(s) && /^we\b/i.test(s.trim())) r.warnings.push(`${where}: opens with "We"`);
   if (/\d+\s?%|\d+x\b/i.test(s)) r.warnings.push(`${where}: contains a figure; make sure it is not an unsupported performance claim`);
+  if (RENDERED_BRAND.test(s)) r.errors.push(`${where}: names "${s.match(RENDERED_BRAND)?.[0]}"; the image templates forbid brand names in the rendered text, use a generic word or "Our team"`);
 }
+
+/** Brand and company names that must never be rendered in the image text (the logo is stamped afterwards). */
+const RENDERED_BRAND = /\b(webscalelabs|google|meta|facebook|instagram|linkedin|whatsapp|tiktok|snapchat|youtube|twitter|shopify|apple|iphone)\b/i;
 
 const PERSON_WORDS = /\b(person|people|man|woman|men|women|founder|owner|marketer|designer|developer|strategist|analyst|creator|editor|salesperson|customer|he|she|his|her|him|they|their|hands?|arms?|face|eyes|fingers?|someone|colleague|team|worker|staff|client)\b/i;
 
@@ -98,7 +119,7 @@ export function checkSingle(single: unknown, r: Report, format: Format = "dark",
   }
   const s = single as Partial<SingleSpec>;
   checkHeadline(where, s.headline, s.cyan, r);
-  checkSupporting(`${where}.supporting`, s.supporting, r);
+  checkSupporting(`${where}.supporting`, s.supporting, r, s.headline);
   checkHero(`${where}.hero`, s.hero, r, format);
   if (!LAYOUTS.includes(s.layout as never)) r.errors.push(`${where}.layout: must be A, B or C`);
 }
@@ -125,7 +146,7 @@ export function checkCarousel(carousel: unknown, r: Report, format: Format = "da
       if (isStr(s.supporting) && s.supporting.trim() && s.supporting.trim() !== CAROUSEL_CTA)
         r.warnings.push(`${w}.supporting: ignored, slide 4 always renders the fixed CTA`);
     } else {
-      checkSupporting(`${w}.supporting`, s.supporting, r);
+      checkSupporting(`${w}.supporting`, s.supporting, r, s.headline);
     }
     checkHero(`${w}.hero`, s.hero, r, format);
     if (isStr(s.hero)) heroes.push(s.hero.trim().toLowerCase());
