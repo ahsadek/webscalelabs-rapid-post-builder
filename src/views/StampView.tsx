@@ -5,23 +5,16 @@ type Slide = { name: string; img: HTMLImageElement };
 type CounterMode = "all" | "skip1" | "none";
 
 const DEFAULT_LOGO = "/logo-white.png";
+const CYAN_LOGO = "/logo-cyan.png";
 const LOGO_KEY = "wsl.logo";
 const TONE_KEY = "wsl.logoTone";
-type LogoTone = "original" | "navy";
-const TONE_FILL: Record<Exclude<LogoTone, "original">, string> = { navy: "#0D1F2D" };
-
-/** Recolours every visible pixel of the logo to one flat colour, keeping its transparency. */
-async function tintLogo(img: HTMLImageElement, tone: LogoTone): Promise<HTMLImageElement> {
-  if (tone === "original") return img;
-  const c = document.createElement("canvas");
-  c.width = img.naturalWidth; c.height = img.naturalHeight;
-  const ctx = c.getContext("2d")!;
-  ctx.drawImage(img, 0, 0);
-  ctx.globalCompositeOperation = "source-in";
-  ctx.fillStyle = TONE_FILL[tone];
-  ctx.fillRect(0, 0, c.width, c.height);
-  return loadImage(c.toDataURL("image/png"));
-}
+/** "original" is the white default (or the uploaded custom logo); "cyan" is the brand-coloured wordmark. */
+type LogoTone = "original" | "cyan";
+const LOGO_TONES: LogoTone[] = ["original", "cyan"];
+const readTone = (): LogoTone => {
+  const t = store.get(TONE_KEY);
+  return LOGO_TONES.includes(t as LogoTone) ? (t as LogoTone) : "original";
+};
 
 const store = {
   get(k: string): string | null {
@@ -124,14 +117,14 @@ export function StampView({ baseName }: { baseName: string | null }) {
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const [logoSource, setLogoSource] = useState<"default" | "custom">(store.get(LOGO_KEY) ? "custom" : "default");
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [tone, setTone] = useState<LogoTone>(() => (store.get(TONE_KEY) as LogoTone) || "original");
+  const [tone, setTone] = useState<LogoTone>(readTone);
   const [over, setOver] = useState(false);
   const [fontTick, setFontTick] = useState(0);
   const logoInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const src = store.get(LOGO_KEY) || DEFAULT_LOGO;
-    loadImage(src).then((img) => tintLogo(img, tone)).then(setLogo).catch(() => setLogo(null));
+    const src = tone === "cyan" ? CYAN_LOGO : store.get(LOGO_KEY) || DEFAULT_LOGO;
+    loadImage(src).then(setLogo).catch(() => setLogo(null));
   }, [logoSource, tone]);
   const pickTone = (t: LogoTone) => {
     setTone(t);
@@ -229,9 +222,9 @@ export function StampView({ baseName }: { baseName: string | null }) {
 
       <div className="row logo-tone">
         <span className="hint">Logo colour</span>
-        {(["original", "navy"] as LogoTone[]).map((t) => (
+        {LOGO_TONES.map((t) => (
           <button key={t} className={"btn sm" + (tone === t ? "" : " ghost")} aria-pressed={tone === t} onClick={() => pickTone(t)}>
-            {t === "original" ? "As uploaded (dark and photo posts)" : "Navy (light posts)"}
+            {t === "cyan" ? "Cyan" : logoSource === "custom" ? "As uploaded" : "White"}
           </button>
         ))}
       </div>
